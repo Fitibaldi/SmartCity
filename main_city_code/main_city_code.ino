@@ -1,47 +1,70 @@
-const int trigPin = 10;
-const int echoPin = 11;
+//common pins
 const int buzzerPin = 2;
+
+// street lamps scenario
+const int lampsTriggPin = 10;
+const int lampsEchoPin = 11;
+const int lampsRelayPin = 3;
 
 void setup() {
   Serial.begin(9600);
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
   pinMode(buzzerPin, OUTPUT);
+
+  pinMode (lampsTriggPin, OUTPUT);
+  pinMode(lampsEchoPin, INPUT);
+  pinMode(lampsRelayPin, OUTPUT);
 }
 
 void loop() {
   long duration;
   int distance;
 
+  //Lamps Scenario
+
   // Изпращане на ултразвуков импулс
-  digitalWrite(trigPin, LOW);
+  digitalWrite (lampsTriggPin, LOW);
   delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
+  digitalWrite (lampsTriggPin, HIGH);
   delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
+  digitalWrite (lampsTriggPin, LOW);
 
   // Измерване на времето за връщане
-  duration = pulseIn(echoPin, HIGH);
+  duration = pulseIn(lampsEchoPin, HIGH);
   distance = duration * 0.034 / 2;
 
-  Serial.print("Distance: ");
+  Serial.print("Lamps Distance: ");
   Serial.println(distance);
 
-  if (distance < 20) {
-    playPoliceSiren();
-  } else if (distance < 40) {
-    playFireSiren();
-  } else if (distance < 60) {
-    playScream();
-    playPhoneCall911();   
-    for (int i = 0; i <= 3; i++) {
-      playPoliceSiren();
-    }
+  if (distance <= 10) {
+    turnStreetLamps(1);
   } else {
-    noTone(buzzerPin);
+    turnStreetLamps(0);
   }
 
+
+  // if (distance < 20) {
+    // playPoliceSiren();
+  // } else if (distance < 40) {
+    // playFireSiren();
+  // } else if (distance < 60) {
+    // playGlassBreak();
+    // playPhoneCall911();   
+    // for (int i = 0; i <= 3; i++) {
+      // playPoliceSiren();
+    // }
+  // } else {
+    // noTone(buzzerPin);
+  // }
+
   delay(200);
+}
+
+void turnStreetLamps(int onOff) {
+  if (onOff == 1) {
+    digitalWrite(lampsRelayPin, LOW);
+  } else {
+    digitalWrite(lampsRelayPin, HIGH);
+  }
 }
 
 void playPhoneCall911() {
@@ -86,16 +109,6 @@ void playOperatorVoice() {
   delay(400);
 }
 
-void playScream() {
-// Кратък, остър писък
-//  tone(buzzerPin, 3500, 300); // Висока честота
-//  delay(350);
-//  tone(buzzerPin, 3800, 200); // Още по-висока
-//  delay(250);
-//  tone(buzzerPin, 3200, 150); // Спад
-//  delay(200);
-}
-
 void playPhoneCallMinions() {
   // Анимационен бърборещ разговор
   int tones[] = {1600, 1800, 1400, 1700, 1500, 1900, 1300, 2000};
@@ -106,7 +119,6 @@ void playPhoneCallMinions() {
     delay(durations[i] + 30); // кратка пауза между „думи“
   }
 }
-
 
 void playPhoneCall() {
   // Симулация на телефонен разговор
@@ -128,6 +140,26 @@ void playFireSiren() {
     tone(buzzerPin, i);
     delay(10);
   }
+}
+
+void playGlassBreak() {
+  // Симулира бърз пук
+  tone(buzzerPin, 3000, 20);  // висок пик
+  delay(30);
+  
+  // Няколко "трош" импулса
+  for (int i = 0; i < 3; i++) {
+    tone(buzzerPin, random(400, 800), 30);
+    delay(40);
+  }
+
+  // Бързи "падания" на честота
+  for (int i = 1000; i > 200; i -= 100) {
+    tone(buzzerPin, i, 20);
+    delay(25);
+  }
+
+  noTone(buzzerPin);  // спиране на звука
 }
 
 void playPoliceSiren() {
