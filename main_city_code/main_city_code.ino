@@ -1,3 +1,6 @@
+#include <Servo.h>
+Servo fireTruckServo;
+
 //common pins
 const int buzzerPin = 2;
 
@@ -6,32 +9,41 @@ const int lampsTriggPin = 10;
 const int lampsEchoPin = 11;
 const int lampsRelayPin = 3;
 
+// Fire scenario pins
+const int fireTriggPin = 8;
+const int fireEchoPin = 9;
+const int hotelYellowFireLeds = 7;
+const int hotelRedFireLeds = 6;
+const int fireTruckLed = A0;
+const int fireTruckServoPin = 5;
+
+
 void setup() {
+  //common initialization
   Serial.begin(9600);
   pinMode(buzzerPin, OUTPUT);
 
+  //street lamps initialization
   pinMode (lampsTriggPin, OUTPUT);
   pinMode(lampsEchoPin, INPUT);
   pinMode(lampsRelayPin, OUTPUT);
+
+  // Fire scenario initialization
+  pinMode(fireTriggPin, OUTPUT);
+  pinMode(fireEchoPin, INPUT);
+  pinMode(hotelRedFireLeds, OUTPUT);
+  pinMode(hotelYellowFireLeds, OUTPUT);
+  pinMode(fireTruckLed, OUTPUT);
+  fireTruckServo.attach(fireTruckServoPin);
+  fireTruckServo.write(170);
+
 }
 
 void loop() {
-  long duration;
   int distance;
 
   //Lamps Scenario
-
-  // Изпращане на ултразвуков импулс
-  digitalWrite (lampsTriggPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite (lampsTriggPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite (lampsTriggPin, LOW);
-
-  // Измерване на времето за връщане
-  duration = pulseIn(lampsEchoPin, HIGH);
-  distance = duration * 0.034 / 2;
-
+  distance = measureDistance(lampsTriggPin, lampsEchoPin);
   Serial.print("Lamps Distance: ");
   Serial.println(distance);
 
@@ -41,22 +53,34 @@ void loop() {
     turnStreetLamps(0);
   }
 
+  // Fire Scenario
+  distance = measureDistance(fireTriggPin, fireEchoPin);
+  Serial.print("Fire Distance: ");
+  Serial.println(distance);
 
-  // if (distance < 20) {
-    // playPoliceSiren();
-  // } else if (distance < 40) {
-    // playFireSiren();
-  // } else if (distance < 60) {
-    // playGlassBreak();
-    // playPhoneCall911();   
-    // for (int i = 0; i <= 3; i++) {
-      // playPoliceSiren();
-    // }
-  // } else {
-    // noTone(buzzerPin);
-  // }
+  if (distance <= 10) {
+    simulateFire();
+  }
 
   delay(200);
+}
+
+int measureDistance(int triggPin, int echoPin) {
+  long duration;
+  int distance;
+
+  // Изпращане на ултразвуков импулс
+  digitalWrite (triggPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite (triggPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite (triggPin, LOW);
+
+  // Измерване на времето за връщане
+  duration = pulseIn(echoPin, HIGH);
+  distance = duration * 0.034 / 2;
+
+  return distance;
 }
 
 void turnStreetLamps(int onOff) {
@@ -64,6 +88,35 @@ void turnStreetLamps(int onOff) {
     digitalWrite(lampsRelayPin, LOW);
   } else {
     digitalWrite(lampsRelayPin, HIGH);
+  }
+}
+
+void simulateFire() {
+  // Запалване на хотела
+  hotelFire(12);
+
+  // Сирена
+  playFireSiren();
+  hotelFire(3);
+
+  // Завъртане на серво мотор (пожарната тръгва)
+  fireTruckServo.write(10);
+  hotelFire(3);
+  playFireSiren();
+
+  delay(5000);
+
+  fireTruckServo.write(170);
+}
+
+void hotelFire(int reps) {
+  for (int i = 0; i < reps; i++) {
+    digitalWrite(hotelRedFireLeds, HIGH);
+    delay(100);
+    digitalWrite(hotelRedFireLeds, LOW);
+    digitalWrite(hotelYellowFireLeds, HIGH);
+    delay(100);
+    digitalWrite(hotelYellowFireLeds, LOW);
   }
 }
 
@@ -131,16 +184,46 @@ void playPhoneCall() {
 }
 
 void playFireSiren() {
-  // Сирена на пожарна
-  for (int i = 1000; i <= 2000; i += 50) {
-    tone(buzzerPin, i);
-    delay(10);
+  const int ledToggleInterval = 100; // на всеки 100 ms
+  const int toneStepDelay = 10;      // на всеки 10 ms
+  unsigned long lastLedToggleTime = millis();
+  bool ledState = false;
+
+  for (int cycle = 0; cycle < 10; cycle++) {
+    // Нарастваща честота
+    for (int freq = 1000; freq <= 2000; freq += 50) {
+      tone(buzzerPin, freq);
+
+      // Проверка дали е време да сменим LED състоянието
+      if (millis() - lastLedToggleTime >= ledToggleInterval) {
+        ledState = !ledState;
+        digitalWrite(fireTruckLed, ledState ? HIGH : LOW);
+        lastLedToggleTime = millis();
+      }
+
+      delay(toneStepDelay);
+    }
+
+    // Намаляваща честота
+    for (int freq = 2000; freq >= 1000; freq -= 50) {
+      tone(buzzerPin, freq);
+
+      if (millis() - lastLedToggleTime >= ledToggleInterval) {
+        ledState = !ledState;
+        digitalWrite(fireTruckLed, ledState ? HIGH : LOW);
+        lastLedToggleTime = millis();
+      }
+
+      delay(toneStepDelay);
+    }
+
+    delay(30);  // пауза между циклите
   }
-  for (int i = 2000; i >= 1000; i -= 50) {
-    tone(buzzerPin, i);
-    delay(10);
-  }
+
+  noTone(buzzerPin);
+  digitalWrite(fireTruckLed, LOW); // изгасяне след края
 }
+
 
 void playGlassBreak() {
   // Симулира бърз пук
