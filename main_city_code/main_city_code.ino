@@ -17,6 +17,13 @@ const int hotelRedFireLeds = 6;
 const int fireTruckLed = A0;
 const int fireTruckServoPin = 5;
 
+// Police + Robbery scenario
+const int robberyHousePin = A4;
+const int domesticLightPin = A2;
+const int policeCarLightsPin = A5;
+const int policeTriggPin = 13;
+const int policeEchoPin = 12;
+
 
 void setup() {
   //common initialization
@@ -37,6 +44,12 @@ void setup() {
   fireTruckServo.attach(fireTruckServoPin);
   fireTruckServo.write(170);
 
+  // Police + Robbery scenario initialization  // Police + Robbery scenario initialization
+  pinMode(policeTriggPin, OUTPUT);
+  pinMode(policeEchoPin, INPUT);
+  pinMode(robberyHousePin, OUTPUT);
+  pinMode(domesticLightPin, OUTPUT);
+  pinMode(policeCarLightsPin, OUTPUT);
 }
 
 void loop() {
@@ -53,13 +66,22 @@ void loop() {
     turnStreetLamps(0);
   }
 
-  // Fire Scenario
+  // Fire Scenario  // Fire Scenario
   distance = measureDistance(fireTriggPin, fireEchoPin);
   Serial.print("Fire Distance: ");
   Serial.println(distance);
 
   if (distance <= 10) {
     simulateFire();
+  }
+
+  // Police + Robbery Scenario
+  distance = measureDistance(policeTriggPin, policeEchoPin);
+  Serial.print("Police Distance: ");
+  Serial.println(distance);
+
+  if (distance <= 10) {
+    simulateRobbery();
   }
 
   delay(200);
@@ -120,6 +142,102 @@ void hotelFire(int reps) {
   }
 }
 
+void playFireSiren() {
+  const int ledToggleInterval = 100; // на всеки 100 ms
+  const int toneStepDelay = 10;      // на всеки 10 ms
+  unsigned long lastLedToggleTime = millis();
+  bool ledState = false;
+
+  for (int cycle = 0; cycle < 10; cycle++) {
+    // Нарастваща честота
+    for (int freq = 1000; freq <= 2000; freq += 50) {
+      tone(buzzerPin, freq);
+
+      // Проверка дали е време да сменим LED състоянието
+      if (millis() - lastLedToggleTime >= ledToggleInterval) {
+        ledState = !ledState;
+        digitalWrite(fireTruckLed, ledState ? HIGH : LOW);
+        lastLedToggleTime = millis();
+      }
+
+      delay(toneStepDelay);
+    }
+
+    // Намаляваща честота
+    for (int freq = 2000; freq >= 1000; freq -= 50) {
+      tone(buzzerPin, freq);
+
+      if (millis() - lastLedToggleTime >= ledToggleInterval) {
+        ledState = !ledState;
+        digitalWrite(fireTruckLed, ledState ? HIGH : LOW);
+        lastLedToggleTime = millis();
+      }
+
+      delay(toneStepDelay);
+    }
+
+    delay(30);  // пауза между циклите
+  }
+
+  noTone(buzzerPin);
+  digitalWrite(fireTruckLed, LOW); // изгасяне след края
+}
+
+void simulateRobbery() {
+  playGlassBreak();
+  delay(300);
+
+  for (int i = 0; i < 3; i++) {
+    digitalWrite(robberyHousePin, HIGH);
+    playGunShot();
+    delay(200);
+    digitalWrite(robberyHousePin, LOW);
+    delay(200);
+  }
+
+  digitalWrite(domesticLightPin, HIGH); // съседни къщи
+  delay(500);
+
+  playPhoneCall911();
+  delay(1000);
+
+  playPoliceSiren();
+  delay(1000);
+
+  playPoliceVoice(); // "OK! OK!"
+
+  digitalWrite(domesticLightPin, LOW);
+
+  playPoliceSirenShort();
+  delay(1000);
+}
+
+void playGunShot() {
+  tone(buzzerPin, 200, 60); delay(70);
+  tone(buzzerPin, 300, 30); delay(50);
+  noTone(buzzerPin);
+}
+
+void playPoliceVoice() {
+  tone(buzzerPin, 900, 80); delay(90);
+  tone(buzzerPin, 600, 80); delay(90);
+  delay(150);
+  tone(buzzerPin, 800, 80); delay(90);
+  tone(buzzerPin, 500, 80); delay(90);
+  noTone(buzzerPin);
+}
+
+void playPoliceSirenShort() {
+  digitalWrite(policeCarLightsPin, HIGH);
+  tone(buzzerPin, 1200, 150); delay(200);
+  digitalWrite(policeCarLightsPin, LOW);
+  tone(buzzerPin, 1000, 150); delay(200);
+  digitalWrite(policeCarLightsPin, HIGH);
+  noTone(buzzerPin);
+  delay(200);
+  digitalWrite(policeCarLightsPin, LOW);
+}
+
 void playPhoneCall911() {
   // 1. Две позвънявания (пауза между тях)
   for (int i = 0; i < 2; i++) {
@@ -173,57 +291,6 @@ void playPhoneCallMinions() {
   }
 }
 
-void playPhoneCall() {
-  // Симулация на телефонен разговор
-  tone(buzzerPin, 1200, 200);
-  delay(250);
-  tone(buzzerPin, 1000, 200);
-  delay(250);
-  tone(buzzerPin, 800, 200);
-  delay(250);
-}
-
-void playFireSiren() {
-  const int ledToggleInterval = 100; // на всеки 100 ms
-  const int toneStepDelay = 10;      // на всеки 10 ms
-  unsigned long lastLedToggleTime = millis();
-  bool ledState = false;
-
-  for (int cycle = 0; cycle < 10; cycle++) {
-    // Нарастваща честота
-    for (int freq = 1000; freq <= 2000; freq += 50) {
-      tone(buzzerPin, freq);
-
-      // Проверка дали е време да сменим LED състоянието
-      if (millis() - lastLedToggleTime >= ledToggleInterval) {
-        ledState = !ledState;
-        digitalWrite(fireTruckLed, ledState ? HIGH : LOW);
-        lastLedToggleTime = millis();
-      }
-
-      delay(toneStepDelay);
-    }
-
-    // Намаляваща честота
-    for (int freq = 2000; freq >= 1000; freq -= 50) {
-      tone(buzzerPin, freq);
-
-      if (millis() - lastLedToggleTime >= ledToggleInterval) {
-        ledState = !ledState;
-        digitalWrite(fireTruckLed, ledState ? HIGH : LOW);
-        lastLedToggleTime = millis();
-      }
-
-      delay(toneStepDelay);
-    }
-
-    delay(30);  // пауза между циклите
-  }
-
-  noTone(buzzerPin);
-  digitalWrite(fireTruckLed, LOW); // изгасяне след края
-}
-
 
 void playGlassBreak() {
   // Симулира бърз пук
@@ -246,13 +313,42 @@ void playGlassBreak() {
 }
 
 void playPoliceSiren() {
-  // Полицейска сирена
-  for (int i = 800; i <= 1000; i += 100) {
-    tone(buzzerPin, i);
-    delay(100);
+  const int ledToggleInterval = 100;  // смяна на LED на всеки 100 ms
+  const int toneStepDelay = 10;       // промяна на честотата на всеки 10 ms
+  unsigned long lastLedToggleTime = millis();
+  bool ledState = false;
+
+  for (int cycle = 0; cycle < 6; cycle++) {
+    // Повишаване на честотата
+    for (int freq = 1000; freq <= 2000; freq += 50) {
+      tone(buzzerPin, freq);
+
+      // Мигане на полицейските светлини
+      if (millis() - lastLedToggleTime >= ledToggleInterval) {
+        ledState = !ledState;
+        digitalWrite(policeCarLightsPin, ledState ? HIGH : LOW);
+        lastLedToggleTime = millis();
+      }
+
+      delay(toneStepDelay);
+    }
+
+    // Понижаване на честотата
+    for (int freq = 2000; freq >= 1000; freq -= 50) {
+      tone(buzzerPin, freq);
+
+      if (millis() - lastLedToggleTime >= ledToggleInterval) {
+        ledState = !ledState;
+        digitalWrite(policeCarLightsPin, ledState ? HIGH : LOW);
+        lastLedToggleTime = millis();
+      }
+
+      delay(toneStepDelay);
+    }
+
+    delay(30); // малка пауза между циклите
   }
-  for (int i = 1000; i >= 800; i -= 100) {
-    tone(buzzerPin, i);
-    delay(10);
-  }
+
+  noTone(buzzerPin);
+  digitalWrite(policeCarLightsPin, LOW);  // Уверяваме се, че диодите са изгасени
 }
